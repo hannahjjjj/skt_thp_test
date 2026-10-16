@@ -45,8 +45,13 @@ window.SalesSource = (() => {
   function connect(config, {onRows,onStatus,onAuth}) {
     const client=window.SalesSupabase.createClient(config.url,config.publicKey,{db:{schema:config.schema},auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
     let stopped=false,channel=null,inFlight=false,pending=false,generation=0,controller=null;
-    let subscribed=false,lastSync=null,timer=null,debounce=null,sessionUser=null;
-    const status=(kind,message)=>{if(!stopped)onStatus({kind,message,lastSync});};
+    let subscribed=false,lastSync=null,timer=null,debounce=null,sessionUser=null,dataError=null;
+    const status=(kind,message)=>{
+      if(stopped)return;
+      // Transport recovery cannot clear a failed database read. Only a successful read can.
+      if(dataError && ['live','polling'].includes(kind))onStatus({kind:'error',message:dataError,lastSync});
+      else onStatus({kind,message,lastSync});
+    };
     function errorMessage(error) {
       if (['42501','PGRST301','PGRST302'].includes(error?.code) || [401,403].includes(error?.status)) return '읽기 권한이 없습니다. 로그인하거나 DB 접근 정책을 확인해 주세요.';
       if (error?.code === '42P01' || error?.code === 'PGRST205') return '판매 테이블을 찾을 수 없습니다. 연결 설정을 확인해 주세요.';
@@ -89,10 +94,10 @@ window.SalesSource = (() => {
         try {normalized=normalize(records,config.columns);}
         catch {throw Object.assign(new Error('Invalid sales data'),{code:'INVALID_SALES_DATA'});}
         if(stopped || version!==generation)return;
-        lastSync=new Date();onRows(normalized);status(subscribed?'live':'polling',subscribed?'실시간 연결':'자동 동기화 · 실시간 재연결 중');
+        dataError=null;lastSync=new Date();onRows(normalized);status(subscribed?'live':'polling',subscribed?'실시간 연결':'자동 동기화 · 실시간 재연결 중');
       } catch(error) {
         if(stopped || version!==generation)return;
-        status('error',errorMessage(error));
+        dataError=errorMessage(error);status('error',dataError);
       } finally {
         inFlight=false;
         if(pending&&!stopped){pending=false;clearTimeout(debounce);debounce=setTimeout(load,150);}
@@ -101,7 +106,7 @@ window.SalesSource = (() => {
     function schedule(){if(stopped)return;clearTimeout(debounce);debounce=setTimeout(load,120);}
     function restart(session) {
       if(stopped)return;
-      generation++;controller?.abort();lastSync=null;subscribed=false;
+      generation++;controller?.abort();lastSync=null;subscribed=false;dataError=null;
       sessionUser=session?.user?.id||null;status('loading','DB 데이터를 불러오는 중');onRows([]);onAuth(session?.user||null);
       if(channel)client.removeChannel(channel);
       const current=generation;

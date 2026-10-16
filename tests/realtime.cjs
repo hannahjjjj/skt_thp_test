@@ -89,6 +89,10 @@ function check(value,message){assert.ok(value,message);checks++;}
   await page.waitForFunction(()=>document.querySelector('#connection-status').dataset.kind==='error');
   check(await metric('#total-revenue')===oldRevenue,'Failed refresh preserves last successful snapshot');
   check((await page.locator('#sync-message').innerText()).includes('마지막 동기화'),'Failure displays last sync time');
+  const failedSocket=sockets.filter(s=>s.active&&s.topic).at(-1);
+  failedSocket.ws.send(JSON.stringify([failedSocket.joinRef,null,failedSocket.topic,'phx_error',{}]));
+  await page.waitForTimeout(350);
+  check((await page.locator('#connection-status').getAttribute('data-kind'))==='error','Realtime status cannot mask failed database reads');
   failRequests=false;await page.locator('#refresh-data').click();
   await page.waitForFunction(()=>document.querySelector('#connection-status').dataset.kind==='live');
   // A malformed row fails the whole refresh, rather than silently undercounting revenue.
