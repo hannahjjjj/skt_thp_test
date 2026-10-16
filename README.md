@@ -4,7 +4,7 @@ Supabase DB의 판매 실적을 조회하고 변경을 자동 반영하는 한�
 
 ## 실행
 
-Node.js 22 이상을 사용합니다.
+Node.js 24.x를 사용합니다.
 
 ```sh
 npm ci
@@ -73,6 +73,14 @@ npm run build
 ```
 
 동일한 환경 변수를 배포 빌드에 넣고 **`dist/`만** 정적 호스팅에 배포합니다. DB 설정을 바꾸면 다시 빌드·배포해야 합니다. Supabase 모드의 `dist/`에는 엑셀 샘플과 원본 파일이 포함되지 않습니다. Supabase 프로젝트에 대한 HTTPS·WebSocket 접근이 허용되어야 합니다. GitHub에 소스를 푸시하는 작업은 사이트 배포나 DB SQL 적용을 수행하지 않습니다.
+
+### Vercel
+
+저장소 루트를 프로젝트 Root Directory로 사용합니다. `vercel.json`에서 Framework를 Other로, Build Command를 `npm run build`로, Output Directory를 `dist`로 지정합니다. `public` 폴더를 만들 필요는 없습니다.
+
+로컬 `.env`는 Git에 포함되지 않으므로 Vercel에는 자동으로 전달되지 않습니다. Vercel Project Settings → Environment Variables에서 `NEXT_PUBLIC_SUPABASE_URL`과 `NEXT_PUBLIC_SUPABASE_ANON_KEY`(publishable 키 사용 가능)를 배포 대상 환경에 등록하고 다시 배포하세요. `Production` 배포에 사용할 변수는 Production 범위에 적용되어야 합니다. `SUPABASE_SCHEMA`와 `SUPABASE_TABLE`은 기본 `public.sales`를 사용하면 생략합니다. DB 비밀번호와 service_role 키는 배포 빌드에 필요하지 않습니다.
+
+빌드 로그의 `Dashboard built (Supabase mode).`로 DB 설정 반영을 확인합니다. `Excel demo mode`는 URL과 공개용 키가 모두 없는 경우이며 실제 DB 연결을 의미하지 않습니다. Vercel 배포 성공과 Supabase 테이블 생성·로그인 권한·실시간 동작 검증은 별도입니다.
 
 ## 엑셀 데이터
 
