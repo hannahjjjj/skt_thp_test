@@ -4,10 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#153e35">
-  <meta name="description" content="2026년 3분기 매장 판매 실적을 기간, 지역, 매장, 상품군별로 분석하는 대시보드">
+  <meta name="description" content="매장 판매 실적을 기간, 지역, 매장, 상품군별로 분석하는 대시보드">
   <title>매장 판매 대시보드 · SALESCOPE</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="runtime-config.js" defer></script>
+  <script src="vendor/supabase.js" defer></script>
   <script src="data/sales.js" defer></script>
+  <script src="sales-client.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
@@ -21,21 +24,22 @@
       <a href="#transactions" class="nav-item" data-nav="transactions"><span data-icon="list"></span>판매 내역</a>
       <a href="#data-guide" class="nav-item" data-nav="data-guide"><span data-icon="info"></span>데이터 안내</a>
     </nav>
-    <div class="sidebar-bottom"><div class="source-badge"><span data-icon="file"></span><div>엑셀 데이터 연결<small>매장판매실적.xlsx</small></div><span class="status-dot"></span></div><div class="sidebar-foot">SALES INTELLIGENCE<span>2026 Q3</span></div></div>
+    <div class="sidebar-bottom"><div class="source-badge"><span data-icon="file"></span><div><span id="source-name">데이터 확인 중</span><small id="source-detail"></small></div><span class="status-dot"></span></div><div class="sidebar-foot">SALES INTELLIGENCE<span id="sidebar-period">SALES</span></div></div>
   </aside>
   <div class="main-shell">
-    <header class="topbar"><div class="breadcrumb">워크스페이스 <span>/</span> <strong>실적 대시보드</strong></div><div class="topbar-right"><span class="connection"><i></i>데이터 불러오기 완료</span><div class="avatar" aria-label="영업 관리자">S</div></div></header>
+    <header class="topbar"><div class="breadcrumb">워크스페이스 <span>/</span> <strong>실적 대시보드</strong></div><div class="topbar-right"><span class="connection" id="connection-status" role="status"><i></i><span id="connection-text">데이터 확인 중</span></span><button class="auth-button" id="auth-button" hidden>로그인</button><div class="avatar" aria-label="영업 관리자">S</div></div></header>
     <main id="overview">
-      <section class="page-heading"><div><div class="eyebrow">PERFORMANCE OVERVIEW</div><h1>매장 판매 대시보드<span class="quarter">2026 Q3</span></h1><p>흩어진 판매 실적을 한눈에, 더 나은 영업의 시작.</p></div><button class="button export" id="export"><span data-icon="download"></span>내역 다운로드</button></section>
-      <section class="summary-banner"><div class="banner-symbol" data-icon="spark"></div><div><span class="banner-kicker">분기 실적 브리핑</span><h2 id="insight-title">판매 데이터를 분석하고 있습니다.</h2><p id="insight-description"></p></div><div class="banner-period"><span>DATA PERIOD</span><strong>2026.07 — 09</strong><small>업로드된 실적 기준</small></div></section>
+      <section class="page-heading"><div><div class="eyebrow">PERFORMANCE OVERVIEW</div><h1>매장 판매 대시보드<span class="quarter" id="heading-period"></span></h1><p>흩어진 판매 실적을 한눈에, 더 나은 영업의 시작.</p></div><button class="button export" id="export"><span data-icon="download"></span>내역 다운로드</button></section>
+      <section class="summary-banner"><div class="banner-symbol" data-icon="spark"></div><div><span class="banner-kicker">판매 실적 브리핑</span><h2 id="insight-title">판매 데이터를 분석하고 있습니다.</h2><p id="insight-description"></p></div><div class="banner-period"><span>DATA PERIOD</span><strong id="banner-period">—</strong><small id="banner-source"></small></div></section>
+      <div class="sync-notice" id="sync-notice" role="status"><span id="sync-message"></span><button id="refresh-data" type="button" hidden>다시 동기화</button></div>
       <form class="filters" id="filters" aria-label="실적 필터">
-        <div class="filter-field"><label for="month">조회 기간</label><select id="month"><option value="">전체 기간 · 7–9월</option><option value="2026-07">2026년 7월</option><option value="2026-08">2026년 8월</option><option value="2026-09">2026년 9월</option></select></div>
+        <div class="filter-field"><label for="month">조회 기간</label><select id="month"><option value="">전체 기간</option></select></div>
         <div class="filter-field"><label for="region">지역</label><select id="region"><option value="">전체 지역</option></select></div>
         <div class="filter-field"><label for="store">매장</label><select id="store"><option value="">전체 매장</option></select></div>
         <div class="filter-field"><label for="product">상품군</label><select id="product"><option value="">전체 상품군</option></select></div>
         <button type="reset" class="reset" aria-label="모든 필터 초기화"><span data-icon="reset"></span>초기화</button>
       </form>
-      <div class="result-line"><span><i class="status-dot"></i><strong id="period-label"></strong><span class="result-divider">|</span><span id="result-label" aria-live="polite"></span></span><label class="duplicate-toggle"><input type="checkbox" id="exclude-duplicates"> 중복 의심 행 제외 <span id="duplicate-count" class="count-pill">18</span></label></div>
+      <div class="result-line"><span><i class="status-dot"></i><strong id="period-label"></strong><span class="result-divider">|</span><span id="result-label" aria-live="polite"></span></span><label class="duplicate-toggle"><input type="checkbox" id="exclude-duplicates"> 중복 의심 행 제외 <span id="duplicate-count" class="count-pill">0</span></label></div>
       <section class="kpi-grid" aria-label="핵심 실적 지표">
         <article class="kpi"><div class="kpi-top">총 매출액<span class="kpi-icon green" data-icon="wallet"></span></div><div class="kpi-value" id="total-revenue"></div><div class="kpi-foot"><span class="metric-label green-text">REVENUE</span><span>원본 매출액 합계</span></div></article>
         <article class="kpi"><div class="kpi-top">판매 수량<span class="kpi-icon blue" data-icon="box"></span></div><div class="kpi-value" id="total-quantity"></div><div class="kpi-foot"><span class="metric-label blue-text">VOLUME</span><span id="quantity-note"></span></div></article>
@@ -50,11 +54,20 @@
         <article class="card store-card"><div class="card-heading"><div><h2>매장별 매출 순위<span class="tag">TOP 5</span></h2><p>선택한 조건의 우수 매장을 살펴보세요.</p></div><span class="subtle-icon" data-icon="award"></span></div><div id="store-ranking"></div></article>
         <article class="card region-card"><div class="card-heading"><div><h2>지역별 실적</h2><p>전국 매장의 매출 분포</p></div><span id="region-count" class="tag"></span></div><div class="region-table-wrap"><table class="region-table"><thead><tr><th>지역</th><th>매출액</th><th>매출 비중</th></tr></thead><tbody id="region-body"></tbody></table></div></article>
       </section>
-      <section class="card transactions" id="transactions"><div class="card-heading"><div><h2>상세 판매 내역<span class="tag" id="table-count"></span></h2><p>원본 판매 내역을 검색하고 자세히 확인하세요.</p></div><label class="search"><span data-icon="search"></span><input id="search" type="search" placeholder="매장, 요금제, 담당자 검색" aria-label="판매 내역 검색"></label></div><div class="table-scroll"><table class="sales-table"><thead><tr><th><button data-sort="date">판매일 <span>↕</span></button></th><th>지역</th><th>매장명</th><th>상품군 / 요금제</th><th><button data-sort="quantity">수량 <span>↕</span></button></th><th><button data-sort="revenue">매출액 <span>↕</span></button></th><th>담당자</th><th>데이터 상태</th></tr></thead><tbody id="sales-body"></tbody></table></div><div class="pagination"><span id="page-info" aria-live="polite"></span><div><button id="prev-page" aria-label="이전 페이지">‹</button><span id="page-number"></span><button id="next-page" aria-label="다음 페이지">›</button></div></div></section>
-      <section id="data-guide" class="data-guide"><div class="guide-icon" data-icon="info"></div><div><h2>데이터를 이렇게 집계했어요</h2><p>출처: 매장판매실적.xlsx · Untitled 시트 · 2026.07.01–09.30 · 원본 1,017행</p><p>날짜 형식, 지역명(서울특별시 → 서울 등), ‘원’·쉼표가 포함된 금액을 통일했습니다. 수량 미입력 5건은 수량 합계에서만 제외하며, 해당 매출은 포함합니다. 모든 항목이 같은 중복 의심 18행은 기본 포함하고, 위 옵션으로 제외할 수 있습니다. 요금제 미입력은 ‘—’로 표시합니다.</p></div></section>
-      <footer>© 2026 salescope. <span>데이터에서 발견하는 성장의 가능성</span><span>업로드 파일 기반 · 실시간 데이터 아님</span></footer>
+      <section class="card transactions" id="transactions"><div class="card-heading"><div><h2>상세 판매 내역<span class="tag" id="table-count"></span></h2><p>판매 내역을 검색하고 자세히 확인하세요.</p></div><label class="search"><span data-icon="search"></span><input id="search" type="search" placeholder="매장, 요금제, 담당자 검색" aria-label="판매 내역 검색"></label></div><div class="table-scroll"><table class="sales-table"><thead><tr><th><button data-sort="date">판매일 <span>↕</span></button></th><th>지역</th><th>매장명</th><th>상품군 / 요금제</th><th><button data-sort="quantity">수량 <span>↕</span></button></th><th><button data-sort="revenue">매출액 <span>↕</span></button></th><th>담당자</th><th>데이터 상태</th></tr></thead><tbody id="sales-body"></tbody></table></div><div class="pagination"><span id="page-info" aria-live="polite"></span><div><button id="prev-page" aria-label="이전 페이지">‹</button><span id="page-number"></span><button id="next-page" aria-label="다음 페이지">›</button></div></div></section>
+      <section id="data-guide" class="data-guide"><div class="guide-icon" data-icon="info"></div><div><h2>데이터를 이렇게 집계했어요</h2><p id="data-source-guide"></p><p id="data-quality-guide"></p></div></section>
+      <footer>© 2026 salescope. <span>데이터에서 발견하는 성장의 가능성</span><span id="footer-source"></span></footer>
     </main>
   </div>
+  <dialog id="auth-dialog" class="auth-dialog">
+    <form id="auth-form">
+      <div class="auth-dialog-heading"><h2>판매 대시보드 로그인</h2><button type="button" id="close-auth" aria-label="로그인 창 닫기">×</button></div>
+      <p>판매 내역을 볼 수 있는 계정으로 로그인해 주세요.</p>
+      <label for="auth-email">이메일</label><input id="auth-email" type="email" autocomplete="username" required>
+      <label for="auth-password">비밀번호</label><input id="auth-password" type="password" autocomplete="current-password" required>
+      <p id="auth-error" role="alert"></p><button id="auth-submit" type="submit" class="button">로그인</button>
+    </form>
+  </dialog>
   <div id="toast" role="status" class="toast" hidden></div>
   <noscript>이 대시보드를 사용하려면 브라우저에서 JavaScript를 활성화해 주세요.</noscript>
 </body>

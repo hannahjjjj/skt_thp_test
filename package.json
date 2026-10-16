@@ -1,0 +1,22 @@
+{
+  "name": "salescope-dashboard",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Store sales dashboard with Supabase realtime updates",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/serve.mjs",
+    "test": "node tests/dashboard.cjs && node tests/realtime.cjs && node tests/database.cjs && node tests/config.cjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.118.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.10",
+    "esbuild": "0.28.2",
+    "playwright": "1.62.1"
+  }
+}

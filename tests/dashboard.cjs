@@ -5,7 +5,8 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const expected = JSON.parse(execFileSync('python3', ['tests/verify_data.py'], {cwd: root, encoding: 'utf8'})).rows;
-const server = spawn('python3', ['-m', 'http.server', '8765', '--bind', '127.0.0.1'], {cwd: root, stdio: 'ignore'});
+execFileSync(process.execPath,['scripts/build.mjs'],{cwd:root,env:{...process.env,SUPABASE_URL:'',SUPABASE_PUBLISHABLE_KEY:'',SUPABASE_ANON_KEY:'',NEXT_PUBLIC_SUPABASE_URL:'',NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:'',NEXT_PUBLIC_SUPABASE_ANON_KEY:''}});
+const server = spawn('python3', ['-m', 'http.server', '8765', '--bind', '127.0.0.1'], {cwd: path.join(root,'dist'), stdio: 'ignore'});
 let browser;
 let checks = 0;
 function check(condition, message) { assert.ok(condition, message); checks++; }
